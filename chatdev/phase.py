@@ -333,7 +333,12 @@ class LanguageChoose(Phase):
                                "ideas": chat_env.env_dict['ideas']})
 
     def update_chat_env(self, chat_env) -> ChatEnv:
-        chat_env.env_dict['language'] = "Python"
+        if len(self.seminar_conclusion) > 0 and "<INFO>" in self.seminar_conclusion:
+            chat_env.env_dict['language'] = self.seminar_conclusion.split("<INFO>")[-1].lower().replace(".", "").strip()
+        elif len(self.seminar_conclusion) > 0:
+            chat_env.env_dict['language'] = self.seminar_conclusion
+        else:
+            chat_env.env_dict['language'] = "Python"
         return chat_env
 
 
