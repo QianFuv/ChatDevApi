@@ -4,6 +4,7 @@ version = "0.1.0"
 description = ""
 authors = []
 readme = "README.md"
+package-mode = false
 
 [tool.poetry.dependencies]
 python = "^3.11"
@@ -12,7 +13,7 @@ flask = "2.3.2"
 flask-socketio = "5.3.4"
 importlib-metadata = "6.8.0"
 numpy = "1.24.3"
-openai = "1.47.1"
+openai = "1.59.3"
 regex = "2023.6.3"
 requests = "2.31.0"
 tenacity = "8.2.2"
