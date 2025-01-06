@@ -1,16 +1,5 @@
 {
-    "chain": [{
-            "phase": "DemandAnalysis",
-            "phaseType": "SimplePhase",
-            "max_turn_step": -1,
-            "need_reflect": "True"
-        },
-        {
-            "phase": "LanguageChoose",
-            "phaseType": "SimplePhase",
-            "max_turn_step": -1,
-            "need_reflect": "True"
-        },
+    "chain": [
         {
             "phase": "Coding",
             "phaseType": "SimplePhase",
@@ -21,18 +10,21 @@
             "phase": "CodeCompleteAll",
             "phaseType": "ComposedPhase",
             "cycleNum": 10,
-            "Composition": [{
-                "phase": "CodeComplete",
-                "phaseType": "SimplePhase",
-                "max_turn_step": 1,
-                "need_reflect": "False"
-            }]
+            "Composition": [
+                {
+                    "phase": "CodeComplete",
+                    "phaseType": "SimplePhase",
+                    "max_turn_step": 1,
+                    "need_reflect": "False"
+                }
+            ]
         },
         {
             "phase": "CodeReview",
             "phaseType": "ComposedPhase",
             "cycleNum": 3,
-            "Composition": [{
+            "Composition": [
+                {
                     "phase": "CodeReviewComment",
                     "phaseType": "SimplePhase",
                     "max_turn_step": 1,
@@ -50,7 +42,8 @@
             "phase": "Test",
             "phaseType": "ComposedPhase",
             "cycleNum": 3,
-            "Composition": [{
+            "Composition": [
+                {
                     "phase": "TestErrorSummary",
                     "phaseType": "SimplePhase",
                     "max_turn_step": 1,
