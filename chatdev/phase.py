@@ -348,7 +348,7 @@ class Coding(Phase):
 
     def update_phase_env(self, chat_env):
         gui = "" if not chat_env.config.gui_design \
-            else "The software should be equipped with graphical user interface (GUI) using the Flet framework, which allows for creating beautiful Flutter-like user interfaces in Python. The Flet framework will enable us to build a modern, responsive GUI that users can interact with visually and graphically."
+            else "The software should be equipped with graphical user interface (GUI) so that user can visually and graphically use it; so you must choose a GUI framework (e.g., in Python, you can implement GUI via tkinter, Pygame, Flexx, PyGUI, etc,)."
         self.phase_env.update({"task": chat_env.env_dict['task_prompt'],
                                "description": chat_env.env_dict['task_description'],
                                "modality": chat_env.env_dict['modality'],
