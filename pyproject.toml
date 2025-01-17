@@ -29,6 +29,8 @@ pyyaml = "6.0"
 easydict = "1.10"
 fastapi = "^0.115.6"
 uvicorn = "^0.34.0"
+pydantic = "^2.10.5"
+sqlalchemy = "^2.0.37"
 
 
 [build-system]
