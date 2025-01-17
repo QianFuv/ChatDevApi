@@ -82,7 +82,7 @@
         "Chief Creative Officer"
     ],
     "clear_structure": "True",
-    "gui_design": "True",
+    "gui_design": "false",
     "git_management": "False",
     "web_spider": "False",
     "self_improve": "False",

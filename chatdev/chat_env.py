@@ -63,7 +63,7 @@ class ChatEnv:
             "directory": "",
             "task_prompt": "",
             "task_description":"",
-            "modality": "Application",
+            "modality": "Android application",
             "ideas": "",
             "language": "Python",
             "review_comments": "",
