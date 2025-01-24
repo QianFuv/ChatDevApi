@@ -66,11 +66,11 @@ class OpenAIModel(ModelBackend):
     def run(self, *args, **kwargs):
         string = "\n".join([message["content"] for message in kwargs["messages"]])
         
-        anthropic_models = {
+        non_openai_models = {
             ModelType.CLAUDE_3_5_SONNET,
         }
     
-        if self.model_type in anthropic_models:
+        if self.model_type in non_openai_models:
             encoding = tiktoken.get_encoding("cl100k_base")
         else:
             encoding = tiktoken.encoding_for_model(self.model_type.value)
