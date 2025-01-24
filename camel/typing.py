@@ -53,6 +53,7 @@ class ModelType(Enum):
     GPT_4O = "gpt-4o"
     GPT_4O_MINI = "gpt-4o-mini"
     CLAUDE_3_5_SONNET = "anthropic/claude-3.5-sonnet"
+    DEEPSEEK_R1 = "deepseek/deepseek-r1"
 
     STUB = "stub"
 

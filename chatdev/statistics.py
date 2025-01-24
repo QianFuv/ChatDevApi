@@ -15,7 +15,8 @@ def prompt_cost(model_type: str, num_prompt_tokens: float, num_completion_tokens
         "gpt-4-turbo": 0.01,
         "gpt-4o": 0.005,
         "gpt-4o-mini": 0.00015,
-        "anthropic/claude-3.5-sonnet": 0.01,
+        "anthropic/claude-3.5-sonnet": 0.003,
+        "deepseek/deepseek-r1": 0.00055,
     }
 
     output_cost_map = {
@@ -29,7 +30,8 @@ def prompt_cost(model_type: str, num_prompt_tokens: float, num_completion_tokens
         "gpt-4-turbo": 0.03,
         "gpt-4o": 0.015,
         "gpt-4o-mini": 0.0006,
-        "anthropic/claude-3.5-sonnet": 0.03,
+        "anthropic/claude-3.5-sonnet": 0.015,
+        "deepseek/deepseek-r1": 0.00219,
     }
 
     if model_type not in input_cost_map or model_type not in output_cost_map:
@@ -123,6 +125,8 @@ def get_info(dir, log_filepath):
                 model_type = "gpt-4o-mini"
             elif model_type == "CLAUDE_3_5_SONNET":
                 model_type = "anthropic/claude-3.5-sonnet"
+            elif model_type == "DEEPSEEK_R1":
+                model_type = "deepseek/deepseek-r1"
             # print("model_type:", model_type)
 
         lines = open(log_filepath, "r", encoding="utf8").read().split("\n")
