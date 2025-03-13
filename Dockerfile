@@ -1,24 +1,48 @@
-# Start with a Python 3.9 base image
-FROM python:3.9-slim
+# Use Python 3.11 as base image
+FROM python:3.11-slim
 
-# Set the working directory in the container
+# Set working directory
 WORKDIR /app
 
-# Copy the current directory contents into the container at /app
-COPY . /app
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    python3-dev \
+    curl \
+    git \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
-# Install necessary libraries for GUI support
-RUN apt-get update && apt-get install -y python3-tk x11-apps
+# Install Poetry
+RUN curl -sSL https://install.python-poetry.org | python3 -
 
-# Install the project dependencies
-RUN pip install --no-cache-dir -r requirements.txt
+# Add Poetry to PATH
+ENV PATH="${PATH}:/root/.local/bin"
 
-# Set the environment variable for OpenAI API key
-# (you'll need to provide the actual key when running the container)
-ENV OPENAI_API_KEY=your_OpenAI_API_key
+# Copy pyproject.toml and poetry.lock (if it exists)
+COPY pyproject.toml poetry.lock* ./
 
-# Expose the port for visualizer/app.py
+# Configure Poetry to not create a virtual environment inside the container
+RUN poetry config virtualenvs.create false \
+    && poetry install --no-interaction --no-ansi
+
+# Copy the project
+COPY . .
+
+# Set environment variables
+ENV API_DEBUG=False
+ENV API_LOG_LEVEL=INFO
+ENV API_RATE_LIMIT=100
+ENV API_RATE_WINDOW=60
+
+# Create SQLite database directory
+RUN mkdir -p /app/api/data
+
+# Make WareHouse directory writable
+RUN mkdir -p /app/WareHouse && chmod 777 /app/WareHouse
+
+# Expose the port
 EXPOSE 8000
 
-# Set an entry point that runs a shell for interactive mode
-ENTRYPOINT ["/bin/bash"]
+# Run the API
+CMD ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000"]
