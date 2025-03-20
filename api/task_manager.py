@@ -12,6 +12,7 @@ from typing import Dict, Any, Optional
 from sqlalchemy.orm import Session
 from .database import SessionLocal, Task
 from .config import get_venv_python, ROOT_DIR
+from .actions import setup_and_run_workflow
 
 # Configure logging
 logger = logging.getLogger("chatdev-api.task_manager")
@@ -103,6 +104,32 @@ async def run_chatdev_task(task_id: int, request_data: Dict[str, Any]):
             result_path = f"WareHouse/{request_data['name']}_{request_data['org']}_{timestamp}"
             task.status = "COMPLETED"
             task.result_path = result_path
+            
+            # Check if APK build was requested
+            if request_data.get("build_apk", False):
+                task.build_apk = True
+                db.commit()
+                
+                try:
+                    # Run GitHub Actions workflow to build APK
+                    logger.info(f"Starting APK build for project at {result_path}")
+                    result = await setup_and_run_workflow(str(ROOT_DIR / result_path), task_id)
+                    
+                    if result["success"]:
+                        # Update task with APK path if build was successful
+                        if result["artifacts"]:
+                            apk_file = list(result["artifacts"].values())[0]
+                            task.apk_path = apk_file
+                            logger.info(f"APK build successful: {apk_file}")
+                        else:
+                            logger.warning(f"APK build completed but no artifacts found")
+                    else:
+                        logger.error(f"APK build failed: {result.get('message')}")
+                        task.error_message = f"Software generation successful, but APK build failed: {result.get('message')}"
+                except Exception as e:
+                    logger.exception(f"Error building APK: {str(e)}")
+                    task.error_message = f"Software generation successful, but APK build failed: {str(e)}"
+            
             logger.info(f"Task {task_id} completed successfully. Result at {result_path}")
         else:
             task.status = "FAILED"
@@ -118,6 +145,28 @@ async def run_chatdev_task(task_id: int, request_data: Dict[str, Any]):
         db.commit()
     finally:
         db.close()
+
+async def build_apk_for_project(project_name: str, organization: Optional[str] = None, timestamp: Optional[str] = None):
+    """
+    Build an APK for an existing project
+    
+    Args:
+        project_name: Name of the project
+        organization: Optional organization name
+        timestamp: Optional timestamp
+        
+    Returns:
+        Dict[str, Any]: Result with status and artifact information
+    """
+    from .actions import get_project_path, setup_and_run_workflow
+    
+    # Find the project directory
+    project_dir = get_project_path(project_name, organization, timestamp)
+    if not project_dir:
+        raise ValueError(f"Project {project_name} not found")
+    
+    # Run GitHub Actions workflow
+    return await setup_and_run_workflow(project_dir)
 
 async def cancel_chatdev_task(task_id: int) -> bool:
     """

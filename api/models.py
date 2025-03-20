@@ -20,6 +20,7 @@ class ChatDevGenerateRequest(BaseModel):
     org: str = Field("DefaultOrganization", description="Name of organization")
     model: str = Field("CLAUDE_3_5_SONNET", description="LLM model to use")
     path: str = Field("", description="Path to existing code for incremental development")
+    build_apk: bool = Field(False, description="Whether to build an APK after generating the software")
     
     @validator('name')
     def validate_project_name(cls, v):
@@ -45,7 +46,8 @@ class ChatDevGenerateRequest(BaseModel):
                 "name": "TodoApp",
                 "config": "Default",
                 "org": "MyOrganization",
-                "model": "CLAUDE_3_5_SONNET"
+                "model": "CLAUDE_3_5_SONNET",
+                "build_apk": True
             }
         }
 
@@ -75,6 +77,7 @@ class TaskStatus(BaseModel):
     created_at: datetime = Field(..., description="Task creation timestamp")
     updated_at: datetime = Field(..., description="Last update timestamp")
     result_path: Optional[str] = Field(None, description="Path to the generated software if completed")
+    apk_path: Optional[str] = Field(None, description="Path to the generated APK if built")
     error_message: Optional[str] = Field(None, description="Error message if failed")
 
     class Config:
@@ -85,6 +88,7 @@ class TaskStatus(BaseModel):
                 "created_at": "2024-03-13T14:30:00",
                 "updated_at": "2024-03-13T14:45:00",
                 "result_path": "WareHouse/TodoApp_MyOrganization_20240313143000",
+                "apk_path": "WareHouse/TodoApp_MyOrganization_20240313143000/build/apk/app-release.apk",
                 "error_message": None
             }
         }
@@ -106,6 +110,7 @@ class TaskList(BaseModel):
                         "created_at": "2024-03-13T14:30:00",
                         "updated_at": "2024-03-13T14:45:00",
                         "result_path": "WareHouse/TodoApp_MyOrganization_20240313143000",
+                        "apk_path": "WareHouse/TodoApp_MyOrganization_20240313143000/build/apk/app-release.apk",
                         "error_message": None
                     }
                 ],
@@ -123,6 +128,46 @@ class TaskCancelRequest(BaseModel):
         schema_extra = {
             "example": {
                 "api_key": "sk-..."
+            }
+        }
+
+class BuildApkRequest(BaseModel):
+    """
+    Request model for building an APK from an existing project
+    """
+    api_key: str = Field(..., description="OpenAI API key for authentication")
+    project_name: str = Field(..., description="Name of the project to build")
+    organization: Optional[str] = Field(None, description="Organization name in the project path")
+    timestamp: Optional[str] = Field(None, description="Timestamp in the project path")
+    
+    class Config:
+        schema_extra = {
+            "example": {
+                "api_key": "sk-...",
+                "project_name": "TodoApp",
+                "organization": "MyOrganization",
+                "timestamp": "20240313143000"
+            }
+        }
+
+class BuildApkResponse(BaseModel):
+    """
+    Response model for APK build request
+    """
+    success: bool = Field(..., description="Whether the build was successful")
+    message: str = Field(..., description="Status message")
+    apk_path: Optional[str] = Field(None, description="Path to the built APK file")
+    artifacts: Optional[Dict[str, str]] = Field(None, description="Dictionary of generated artifacts")
+    
+    class Config:
+        schema_extra = {
+            "example": {
+                "success": True,
+                "message": "APK build completed successfully",
+                "apk_path": "WareHouse/TodoApp_MyOrganization_20240313143000/build/apk/app-release.apk",
+                "artifacts": {
+                    "app-release.apk": "WareHouse/TodoApp_MyOrganization_20240313143000/build/apk/app-release.apk"
+                }
             }
         }
 

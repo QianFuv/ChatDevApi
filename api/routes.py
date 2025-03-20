@@ -9,11 +9,14 @@ from .models import (
     TaskResponse, 
     TaskStatus, 
     TaskList,
-    TaskCancelRequest
+    TaskCancelRequest,
+    BuildApkRequest,
+    BuildApkResponse
 )
 from .database import get_db, Task
-from .task_manager import run_chatdev_task, cancel_chatdev_task
+from .task_manager import run_chatdev_task, cancel_chatdev_task, build_apk_for_project
 from .dependencies import verify_api_key
+from .exceptions import ResourceNotFoundError, InternalServerError
 
 # Configure logging
 logger = logging.getLogger("chatdev-api.routes")
@@ -40,6 +43,7 @@ async def generate_project(
     - **org**: Organization name
     - **model**: LLM model to use
     - **path**: Optional path for incremental development
+    - **build_apk**: Whether to build an APK after generating the software (default: false)
     """
     logger.info(f"Received generation request for project: {request.name}")
     
@@ -47,7 +51,8 @@ async def generate_project(
         # Create new task record
         task = Task(
             status="PENDING",
-            request_data=json.loads(request.model_dump_json())
+            request_data=json.loads(request.model_dump_json()),
+            build_apk=request.build_apk
         )
         db.add(task)
         db.commit()
@@ -103,6 +108,7 @@ async def get_task_status(
             created_at=task.created_at,
             updated_at=task.updated_at,
             result_path=task.result_path,
+            apk_path=task.apk_path,
             error_message=task.error_message
         )
     
@@ -152,6 +158,7 @@ async def list_tasks(
                     created_at=task.created_at,
                     updated_at=task.updated_at,
                     result_path=task.result_path,
+                    apk_path=task.apk_path,
                     error_message=task.error_message
                 )
                 for task in tasks
@@ -218,6 +225,7 @@ async def cancel_task(
             created_at=task.created_at,
             updated_at=task.updated_at,
             result_path=task.result_path,
+            apk_path=task.apk_path,
             error_message=task.error_message
         )
     
@@ -270,3 +278,50 @@ async def delete_task(
         )
     finally:
         db.close()
+
+@api_router.post("/build-apk", response_model=BuildApkResponse)
+async def build_apk(
+    request: BuildApkRequest,
+    api_key: str = Depends(verify_api_key)
+):
+    """
+    Build an APK from an existing project
+    
+    This endpoint builds an APK from an existing ChatDev project.
+    
+    - **api_key**: Your OpenAI API key for authentication
+    - **project_name**: Name of the project to build
+    - **organization**: Optional organization name
+    - **timestamp**: Optional timestamp
+    """
+    logger.info(f"Received APK build request for project: {request.project_name}")
+    
+    try:
+        # Build the APK
+        result = await build_apk_for_project(
+            request.project_name,
+            request.organization,
+            request.timestamp
+        )
+        
+        # Extract the first APK path if available
+        apk_path = None
+        if result.get("success") and result.get("artifacts"):
+            apk_path = list(result["artifacts"].values())[0] if result["artifacts"] else None
+        
+        return BuildApkResponse(
+            success=result.get("success", False),
+            message=result.get("message", "APK build failed"),
+            apk_path=apk_path,
+            artifacts=result.get("artifacts")
+        )
+    
+    except ResourceNotFoundError as e:
+        logger.error(f"Project not found: {str(e)}")
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        logger.error(f"Error building APK: {str(e)}")
+        raise HTTPException(
+            status_code=500, 
+            detail=f"Failed to build APK: {str(e)}"
+        )

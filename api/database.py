@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine, Column, Integer, String, DateTime, JSON, Text, Index
+from sqlalchemy import create_engine, Column, Integer, String, DateTime, JSON, Text, Index, Boolean
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session
 from datetime import datetime
@@ -28,6 +28,8 @@ class Task(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     request_data = Column(JSON)
     result_path = Column(String(255), nullable=True)
+    apk_path = Column(String(255), nullable=True)  # New field for APK file path
+    build_apk = Column(Boolean, default=False)  # New field to indicate if APK build was requested
     error_message = Column(Text, nullable=True)
     pid = Column(Integer, nullable=True)  # Process ID for task cancellation
 
@@ -45,6 +47,8 @@ class Task(Base):
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
             "request_data": self.request_data,
             "result_path": self.result_path,
+            "apk_path": self.apk_path,
+            "build_apk": self.build_apk,
             "error_message": self.error_message,
             "pid": self.pid
         }
