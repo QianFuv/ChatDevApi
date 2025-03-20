@@ -1,0 +1,63 @@
+name: Flet 应用构建
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 1. 检出仓库
+        uses: actions/checkout@v4
+
+      - name: 2. 安装 pipx ninja-build libgtk-3-dev
+        run: |
+          sudo apt update
+          sudo apt install pipx ninja-build libgtk-3-dev
+
+      - name: 3. 设置 Python 环境
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      
+      - name: 4. 安装 Poetry
+        run: pipx install poetry
+      
+      - name: 5. 安装环境
+        run: poetry install --no-root
+
+      - name: 6. 安装 JDK 17
+        uses: actions/setup-java@v3
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: 7. 安装 Android SDK
+        uses: android-actions/setup-android@v3
+      
+      - name: 8. 安装 Flutter SDK
+        uses: flutter-actions/setup-flutter@v4
+        with:
+          channel: stable
+          version: 3.24.5
+      
+      - name: 9. 安装 Android Studio
+        run: |
+          wget https://redirector.gvt1.com/edgedl/android/studio/ide-zips/2024.2.1.9/android-studio-2024.2.1.9-linux.tar.gz
+          tar -zxvf android-studio-2024.2.1.9-linux.tar.gz
+          sudo mv android-studio /opt/
+          rm android-studio-2024.2.1.9-linux.tar.gz
+      
+      - name: 10. 测试环境
+        run: |
+          poetry run flutter doctor
+
+      - name: 11. 构建 App
+        run: |
+          poetry run flet build apk
+
+      - name: 12. 上传至 Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          path: build/apk
