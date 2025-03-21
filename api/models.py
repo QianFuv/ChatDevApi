@@ -1,22 +1,22 @@
-from pydantic import BaseModel, Field, validator, EmailStr
+from pydantic import BaseModel, Field, validator, EmailStr, constr
 from typing import Optional, List, Dict, Any, Union
 from datetime import datetime
 import re
 
 class ChatDevGenerateRequest(BaseModel):
     """
-    Request model for generating a new ChatDev project
+    Request model: Generate a new ChatDev project
     """
     # Authentication
     api_key: str = Field(..., description="OpenAI API key for authentication")
-    base_url: Optional[str] = Field(None, description="Optional base URL for API calls")
+    base_url: Optional[str] = Field(None, description="Optional base URL for API calls (for proxies or alternative endpoints)")
     
     # Project settings
     task: str = Field(..., min_length=10, max_length=2000, description="Description of the software to be generated")
     name: str = Field(..., min_length=1, max_length=100, description="Name of the software project")
     
     # Optional configuration
-    config: str = Field("Default", description="Configuration name under CompanyConfig/")
+    config: str = Field("Default", description="Configuration name under CompanyConfig/ (Default, Art, Human, Flet)")
     org: str = Field("DefaultOrganization", description="Name of organization")
     model: str = Field("CLAUDE_3_5_SONNET", description="LLM model to use")
     path: str = Field("", description="Path to existing code for incremental development")
@@ -38,6 +38,13 @@ class ChatDevGenerateRequest(BaseModel):
             raise ValueError(f'Model must be one of: {", ".join(valid_models)}')
         return v
     
+    @validator('config')
+    def validate_config(cls, v):
+        valid_configs = ["Default", "Art", "Human", "Flet", "Incremental"]
+        if v not in valid_configs:
+            raise ValueError(f'Config must be one of: {", ".join(valid_configs)}')
+        return v
+    
     class Config:
         schema_extra = {
             "example": {
@@ -53,7 +60,7 @@ class ChatDevGenerateRequest(BaseModel):
 
 class TaskResponse(BaseModel):
     """
-    Response model for a newly created task
+    Response model: Information about the newly created task
     """
     task_id: int = Field(..., description="Unique identifier for the task")
     status: str = Field(..., description="Current status of the task")
@@ -70,10 +77,10 @@ class TaskResponse(BaseModel):
 
 class TaskStatus(BaseModel):
     """
-    Response model for task status check
+    Response model: Task status check
     """
     task_id: int = Field(..., description="Unique identifier for the task")
-    status: str = Field(..., description="Current status of the task: PENDING, RUNNING, COMPLETED, FAILED")
+    status: str = Field(..., description="Current status of the task: PENDING, RUNNING, COMPLETED, FAILED, CANCELLED")
     created_at: datetime = Field(..., description="Task creation timestamp")
     updated_at: datetime = Field(..., description="Last update timestamp")
     result_path: Optional[str] = Field(None, description="Path to the generated software if completed")
@@ -95,7 +102,7 @@ class TaskStatus(BaseModel):
 
 class TaskList(BaseModel):
     """
-    Response model for listing tasks
+    Response model: List of tasks
     """
     tasks: List[TaskStatus] = Field(..., description="List of tasks")
     total: int = Field(..., description="Total number of tasks")
@@ -120,7 +127,7 @@ class TaskList(BaseModel):
 
 class TaskCancelRequest(BaseModel):
     """
-    Request model for canceling a task
+    Request model: Cancel a task
     """
     api_key: str = Field(..., description="OpenAI API key for authentication")
     
@@ -133,12 +140,18 @@ class TaskCancelRequest(BaseModel):
 
 class BuildApkRequest(BaseModel):
     """
-    Request model for building an APK from an existing project
+    Request model: Build an APK
     """
     api_key: str = Field(..., description="OpenAI API key for authentication")
     project_name: str = Field(..., description="Name of the project to build")
     organization: Optional[str] = Field(None, description="Organization name in the project path")
     timestamp: Optional[str] = Field(None, description="Timestamp in the project path")
+    
+    @validator('project_name')
+    def validate_project_name(cls, v):
+        if not re.match(r'^[A-Za-z0-9_-]+$', v):
+            raise ValueError('Project name must contain only alphanumeric characters, underscores, and hyphens')
+        return v
     
     class Config:
         schema_extra = {
@@ -152,7 +165,7 @@ class BuildApkRequest(BaseModel):
 
 class BuildApkResponse(BaseModel):
     """
-    Response model for APK build request
+    Response model: APK build result
     """
     success: bool = Field(..., description="Whether the build was successful")
     message: str = Field(..., description="Status message")
@@ -173,7 +186,7 @@ class BuildApkResponse(BaseModel):
 
 class HealthResponse(BaseModel):
     """
-    Response model for health check
+    Response model: Health check
     """
     status: str = Field(..., description="Health status")
     version: str = Field(..., description="API version")
@@ -190,7 +203,7 @@ class HealthResponse(BaseModel):
 
 class ErrorResponse(BaseModel):
     """
-    Response model for errors
+    Response model: Error information
     """
     error: str = Field(..., description="Error message")
     type: str = Field(..., description="Error type")
