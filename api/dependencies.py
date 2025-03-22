@@ -65,7 +65,7 @@ def validate_api_key(api_key: str) -> str:
         raise ValidationError("API key cannot be empty")
     
     # Check if it's a valid format (starts with 'sk-' and is sufficiently long)
-    if not re.match(r'^sk-[A-Za-z0-9]{32,}$', api_key):
+    if not re.match(r'^sk-(?:or-v1-)?[A-Za-z0-9]{32,}$', api_key):
         raise ValidationError("Invalid API key format")
     
     # For enhanced security, optionally verify with OpenAI API
