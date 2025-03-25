@@ -150,7 +150,7 @@ jobs:
         
         # Prepare command
         # Instead of using -f flag, directly specify the workflow file with -W
-        cmd = ["act", event, "-W", workflow_path]
+        cmd = ["act", event, "-W", workflow_path, "--artifact-server-path", ".artifacts"]
         
         # Add additional arguments
         if args:
