@@ -89,7 +89,7 @@ class GitHubActionsRunner:
         if not workflow_content:
             default_workflow_path = os.path.join(ROOT_DIR, ".github", "workflows", "build.yml")
             if os.path.exists(default_workflow_path):
-                with open(default_workflow_path, 'r') as f:
+                with open(default_workflow_path, 'r', encoding='utf-8') as f:
                     workflow_content = f.read()
             else:
                 # If no default workflow file exists, use a hardcoded basic workflow
@@ -124,15 +124,15 @@ jobs:
         
         # Write workflow file
         workflow_path = os.path.join(self.workflows_dir, "build.yml")
-        with open(workflow_path, 'w') as f:
+        with open(workflow_path, 'w', encoding='utf-8') as f:
             f.write(workflow_content)
         
         logger.info(f"Setup GitHub Actions workflow at {workflow_path}")
     
     async def run_workflow(self, 
-                           workflow_id: str = "build.yml", 
-                           event: str = "workflow_dispatch",
-                           args: Optional[Dict[str, Any]] = None) -> Tuple[int, str, str]:
+                        workflow_id: str = "build.yml", 
+                        event: str = "workflow_dispatch",
+                        args: Optional[Dict[str, Any]] = None) -> Tuple[int, str, str]:
         """
         Run a GitHub Actions workflow using 'act'
         
@@ -144,15 +144,13 @@ jobs:
         Returns:
             Tuple[int, str, str]: Return code, stdout, and stderr
         """
-        if not os.path.exists(os.path.join(self.workflows_dir, workflow_id)):
+        workflow_path = os.path.join(self.workflows_dir, workflow_id)
+        if not os.path.exists(workflow_path):
             raise ValueError(f"Workflow {workflow_id} does not exist")
         
         # Prepare command
-        cmd = ["act", event, "-W", self.workflows_dir]
-        
-        # Add filename filter if needed
-        if workflow_id:
-            cmd.extend(["-f", workflow_id])
+        # Instead of using -f flag, directly specify the workflow file with -W
+        cmd = ["act", event, "-W", workflow_path]
         
         # Add additional arguments
         if args:

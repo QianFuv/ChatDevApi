@@ -14,7 +14,7 @@ jobs:
       - name: 2. 安装 pipx ninja-build libgtk-3-dev
         run: |
           sudo apt update
-          sudo apt install pipx ninja-build libgtk-3-dev
+          sudo apt install -y pipx ninja-build libgtk-3-dev
 
       - name: 3. 设置 Python 环境
         uses: actions/setup-python@v5
@@ -22,7 +22,10 @@ jobs:
           python-version: '3.12'
       
       - name: 4. 安装 Poetry
-        run: pipx install poetry
+        run: |
+          pipx install poetry
+          pipx ensurepath
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
       
       - name: 5. 安装环境
         run: poetry install --no-root
@@ -35,12 +38,16 @@ jobs:
 
       - name: 7. 安装 Android SDK
         uses: android-actions/setup-android@v3
-      
+
       - name: 8. 安装 Flutter SDK
-        uses: flutter-actions/setup-flutter@v4
-        with:
-          channel: stable
-          version: 3.24.5
+        run: |
+          FLUTTER_VERSION="3.24.5"
+          FLUTTER_CHANNEL="stable"
+          mkdir -p $HOME/flutter
+          wget -q https://storage.googleapis.com/flutter_infra_release/releases/${FLUTTER_CHANNEL}/linux/flutter_linux_${FLUTTER_VERSION}-${FLUTTER_CHANNEL}.tar.xz -O flutter.tar.xz
+          tar -xf flutter.tar.xz -C $HOME
+          echo "$HOME/flutter/bin" >> $GITHUB_PATH
+          export PATH="$HOME/flutter/bin:$PATH"
       
       - name: 9. 安装 Android Studio
         run: |
@@ -53,11 +60,11 @@ jobs:
         run: |
           poetry run flutter doctor
 
+      - name: Configure Gradle memory
+        run: |
+          mkdir -p ~/.gradle
+          echo "org.gradle.jvmargs=-Xmx4g -XX:MaxMetaspaceSize=512m -XX:+HeapDumpOnOutOfMemoryError" > ~/.gradle/gradle.properties
+
       - name: 11. 构建 App
         run: |
-          poetry run flet build apk
-
-      - name: 12. 上传至 Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          path: build/apk
+          poetry run flet build apk --split-per-abi
