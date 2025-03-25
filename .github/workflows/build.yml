@@ -48,6 +48,7 @@ jobs:
           tar -xf flutter.tar.xz -C $HOME
           echo "$HOME/flutter/bin" >> $GITHUB_PATH
           export PATH="$HOME/flutter/bin:$PATH"
+          rm flutter.tar.xz
       
       - name: 9. 安装 Android Studio
         run: |
