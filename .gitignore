@@ -11,3 +11,4 @@ venv/
 
 # ChatDevApi
 /api/chatdev.db
+/WareHouse
