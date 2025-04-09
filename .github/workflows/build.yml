@@ -11,35 +11,29 @@ jobs:
       - name: 1. 检出仓库
         uses: actions/checkout@v4
 
-      - name: 2. 安装 pipx ninja-build libgtk-3-dev
+      - name: 2. 安装 ninja-build libgtk-3-dev
         run: |
           sudo apt update
-          sudo apt install -y pipx ninja-build libgtk-3-dev
+          sudo apt install -y ninja-build libgtk-3-dev
 
       - name: 3. 设置 Python 环境
         uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
+          python-version: '3.11.9'
       
-      - name: 4. 安装 Poetry
-        run: |
-          pipx install poetry
-          pipx ensurepath
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
-      
-      - name: 5. 安装环境
-        run: poetry install --no-root
+      - name: 4. 安装环境
+        run: pip install -r requirements.txt
 
-      - name: 6. 安装 JDK 17
+      - name: 5. 安装 JDK 17
         uses: actions/setup-java@v3
         with:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: 7. 安装 Android SDK
+      - name: 6. 安装 Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: 8. 安装 Flutter SDK
+      - name: 7. 安装 Flutter SDK
         run: |
           FLUTTER_VERSION="3.24.5"
           FLUTTER_CHANNEL="stable"
@@ -50,27 +44,23 @@ jobs:
           export PATH="$HOME/flutter/bin:$PATH"
           rm flutter.tar.xz
       
-      - name: 9. 安装 Android Studio
+      - name: 8. 安装 Android Studio
         run: |
           wget https://redirector.gvt1.com/edgedl/android/studio/ide-zips/2024.2.1.9/android-studio-2024.2.1.9-linux.tar.gz
           tar -zxvf android-studio-2024.2.1.9-linux.tar.gz
           sudo mv android-studio /opt/
           rm android-studio-2024.2.1.9-linux.tar.gz
-      
-      - name: 10. 测试环境
-        run: |
-          poetry run flutter doctor
 
-      - name: Configure Gradle memory
+      - name: 9. 设置 Gradle 构建内存
         run: |
           mkdir -p ~/.gradle
           echo "org.gradle.jvmargs=-Xmx4g -XX:MaxMetaspaceSize=512m -XX:+HeapDumpOnOutOfMemoryError" > ~/.gradle/gradle.properties
 
-      - name: 11. 构建 App
+      - name: 10. 构建 App
         run: |
-          poetry run flet build apk --split-per-abi
+          flet build apk --split-per-abi
       
-      - name: 12. 上传至 Artifact
+      - name: 11. 上传至 Artifact
         uses: actions/upload-artifact@v4
         with:
           path: build/apk
