@@ -21,6 +21,7 @@ from .database import get_db, Task
 from .task_manager import run_chatdev_task, cancel_chatdev_task, build_apk_for_project
 from .dependencies import verify_api_key, get_request_body
 from .exceptions import ResourceNotFoundError, ValidationError, TaskCancellationError, AuthenticationError
+from .actions import get_project_path, setup_and_run_workflow
 from . import __version__
 
 # Configure logging
@@ -132,6 +133,7 @@ async def get_task_status(
     Returns:
     - **task_id** (int): Unique identifier for the task
     - **status** (str): Current status of the task (PENDING, RUNNING, COMPLETED, FAILED, CANCELLED)
+    - **apk_build_status** (str, optional): Status of APK build (BUILDING, BUILDED, BUILDFAILED)
     - **created_at** (datetime): Task creation timestamp
     - **updated_at** (datetime): Last update timestamp
     - **result_path** (str, optional): Path to the generated software if completed
@@ -154,6 +156,7 @@ async def get_task_status(
         return TaskStatus(
             task_id=task.id,
             status=task.status,
+            apk_build_status=task.apk_build_status,
             created_at=task.created_at,
             updated_at=task.updated_at,
             result_path=task.result_path,
@@ -238,6 +241,7 @@ async def list_tasks(
                 TaskStatus(
                     task_id=task.id,
                     status=task.status,
+                    apk_build_status=task.apk_build_status,
                     created_at=task.created_at,
                     updated_at=task.updated_at,
                     result_path=task.result_path,
@@ -444,7 +448,8 @@ async def delete_task(
 )
 async def build_apk(
     request: BuildApkRequest,
-    api_key: str = Depends(verify_api_key)
+    api_key: str = Depends(verify_api_key),
+    db: Session = Depends(get_db)
 ):
     """
     Build an APK from an existing project
@@ -457,6 +462,7 @@ async def build_apk(
     - **project_name** (str, required): Name of the project to build
     - **organization** (str, optional): Organization name in the project path
     - **timestamp** (str, optional): Timestamp in the project path
+    - **task_id** (int, optional): Task ID if building APK for an existing task
     
     Returns:
     - **success** (bool): Whether the build was successful
@@ -467,6 +473,27 @@ async def build_apk(
     logger.info(f"Received APK build request for project: {request.project_name}")
     
     try:
+        # Find project directory
+        project_dir = get_project_path(
+            request.project_name,
+            request.organization,
+            request.timestamp
+        )
+        
+        if not project_dir:
+            raise ResourceNotFoundError(f"Project not found: {request.project_name}")
+        
+        # Update task status if task_id is provided
+        task = None
+        if request.task_id:
+            task = db.query(Task).filter(Task.id == request.task_id).first()
+            if task:
+                task.apk_build_status = "BUILDING"
+                db.commit()
+                logger.info(f"Updated task {request.task_id} APK build status to BUILDING")
+            else:
+                logger.warning(f"Task {request.task_id} not found")
+        
         # Build the APK using GitHub Actions
         result = await build_apk_for_project(
             request.project_name,
@@ -479,8 +506,22 @@ async def build_apk(
         if result.get("success") and result.get("artifacts"):
             apk_path = list(result["artifacts"].values())[0] if result["artifacts"] else None
             logger.info(f"APK built successfully at: {apk_path}")
+            
+            # Update task if task_id is provided
+            if task:
+                task.apk_build_status = "BUILDED"
+                task.apk_path = apk_path
+                db.commit()
+                logger.info(f"Updated task {request.task_id} APK build status to BUILDED")
         else:
             logger.warning(f"APK build failed or no artifacts produced: {result.get('message')}")
+            
+            # Update task if task_id is provided
+            if task:
+                task.apk_build_status = "BUILDFAILED"
+                task.error_message = result.get('message', 'APK build failed')
+                db.commit()
+                logger.info(f"Updated task {request.task_id} APK build status to BUILDFAILED")
         
         # Return build results
         return BuildApkResponse(

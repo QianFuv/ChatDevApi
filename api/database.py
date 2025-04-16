@@ -24,12 +24,13 @@ class Task(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     status = Column(String(20), index=True)  # PENDING, RUNNING, COMPLETED, FAILED, CANCELLED
+    apk_build_status = Column(String(20), nullable=True)  # BUILDING, BUILDED, BUILDFAILED
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     request_data = Column(JSON)
     result_path = Column(String(255), nullable=True)
-    apk_path = Column(String(255), nullable=True)  # New field for APK file path
-    build_apk = Column(Boolean, default=False)  # New field to indicate if APK build was requested
+    apk_path = Column(String(255), nullable=True)  # Path for APK file
+    build_apk = Column(Boolean, default=False)  # Flag to indicate if APK build was requested
     error_message = Column(Text, nullable=True)
     pid = Column(Integer, nullable=True)  # Process ID for task cancellation
 
@@ -43,6 +44,7 @@ class Task(Base):
         return {
             "id": self.id,
             "status": self.status,
+            "apk_build_status": self.apk_build_status,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
             "request_data": self.request_data,

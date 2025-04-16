@@ -81,6 +81,7 @@ class TaskStatus(BaseModel):
     """
     task_id: int = Field(..., description="Unique identifier for the task")
     status: str = Field(..., description="Current status of the task: PENDING, RUNNING, COMPLETED, FAILED, CANCELLED")
+    apk_build_status: Optional[str] = Field(None, description="Status of APK build: BUILDING, BUILDED, BUILDFAILED")
     created_at: datetime = Field(..., description="Task creation timestamp")
     updated_at: datetime = Field(..., description="Last update timestamp")
     result_path: Optional[str] = Field(None, description="Path to the generated software if completed")
@@ -92,6 +93,7 @@ class TaskStatus(BaseModel):
             "example": {
                 "task_id": 1,
                 "status": "COMPLETED",
+                "apk_build_status": "BUILDED",
                 "created_at": "2024-03-13T14:30:00",
                 "updated_at": "2024-03-13T14:45:00",
                 "result_path": "WareHouse/TodoApp_MyOrganization_20240313143000",
@@ -146,6 +148,7 @@ class BuildApkRequest(BaseModel):
     project_name: str = Field(..., description="Name of the project to build")
     organization: Optional[str] = Field(None, description="Organization name in the project path")
     timestamp: Optional[str] = Field(None, description="Timestamp in the project path")
+    task_id: Optional[int] = Field(None, description="Task ID if building APK for an existing task")
     
     @validator('project_name')
     def validate_project_name(cls, v):
@@ -159,7 +162,8 @@ class BuildApkRequest(BaseModel):
                 "api_key": "sk-...",
                 "project_name": "TodoApp",
                 "organization": "MyOrganization",
-                "timestamp": "20240313143000"
+                "timestamp": "20240313143000",
+                "task_id": 1
             }
         }
 

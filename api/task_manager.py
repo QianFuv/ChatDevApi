@@ -108,6 +108,7 @@ async def run_chatdev_task(task_id: int, request_data: Dict[str, Any]):
             # Check if APK build was requested
             if request_data.get("build_apk", False):
                 task.build_apk = True
+                task.apk_build_status = "BUILDING"  # Set status to BUILDING
                 db.commit()
                 
                 try:
@@ -117,6 +118,7 @@ async def run_chatdev_task(task_id: int, request_data: Dict[str, Any]):
                     
                     if result["success"]:
                         # Update task with APK path if build was successful
+                        task.apk_build_status = "BUILDED"  # Set status to BUILDED when successful
                         if result["artifacts"]:
                             apk_file = list(result["artifacts"].values())[0]
                             task.apk_path = apk_file
@@ -125,15 +127,17 @@ async def run_chatdev_task(task_id: int, request_data: Dict[str, Any]):
                             logger.warning(f"APK build completed but no artifacts found")
                     else:
                         logger.error(f"APK build failed: {result.get('message')}")
+                        task.apk_build_status = "BUILDFAILED"  # Set status to BUILDFAILED when failed
                         task.error_message = f"Software generation successful, but APK build failed: {result.get('message')}"
                 except Exception as e:
                     logger.exception(f"Error building APK: {str(e)}")
+                    task.apk_build_status = "BUILDFAILED"  # Set status to BUILDFAILED on exception
                     task.error_message = f"Software generation successful, but APK build failed: {str(e)}"
             
             logger.info(f"Task {task_id} completed successfully. Result at {result_path}")
         else:
             task.status = "FAILED"
-            task.error_message = stderr_str or stdout_str  # Use stdout if stderr is empty
+            task.error_message = stderr_str or stdout_str
             logger.error(f"Task {task_id} failed with exit code {process.returncode}")
         
         db.commit()
