@@ -40,6 +40,7 @@ class ChatMessage(BaseMessage):
         content (str): The content of the message. (default: :obj:`""`)
         refusal (str): The refusal to build argument.
         audio (object): The audio contains data about the audio response from the model.
+        reasoning (Optional[str]): The reasoning content from models that support reasoning.
     """
     role_name: str
     role_type: RoleType
@@ -48,6 +49,7 @@ class ChatMessage(BaseMessage):
     content: str = ""
     refusal: str = None
     audio: object = None
+    reasoning: Optional[str] = None  # 添加支持Claude reasoning字段
     if openai_new_api:
         function_call: Optional[FunctionCall] = None
         tool_calls: Optional[ChatCompletionMessageToolCall] = None
@@ -60,6 +62,7 @@ class ChatMessage(BaseMessage):
             role="user",
             content=self.content,
             refusal=self.refusal,
+            reasoning=getattr(self, 'reasoning', None),  # 传递reasoning字段
         )
 
 
