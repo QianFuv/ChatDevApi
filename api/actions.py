@@ -180,18 +180,95 @@ jobs:
     
     def get_artifacts(self) -> Dict[str, str]:
         """
-        Get the list of artifacts generated from the workflow
+        Get the list of artifacts generated from the workflow and extract APK files
         
         Returns:
             Dict[str, str]: Dictionary mapping artifact names to their paths
         """
-        apk_dir = os.path.join(self.project_dir, "build", "apk")
-        artifacts = {}
+        import zipfile
+        import tempfile
         
-        if os.path.exists(apk_dir):
-            for file in os.listdir(apk_dir):
-                if file.endswith(".apk"):
-                    artifacts[file] = os.path.join(apk_dir, file)
+        artifacts = {}
+        build_dir = os.path.join(self.project_dir, "build")
+        
+        # Create build directory if it doesn't exist
+        if not os.path.exists(build_dir):
+            os.makedirs(build_dir, exist_ok=True)
+        
+        # Look for the specific artifact.zip file
+        artifact_zip_path = os.path.join(self.project_dir, ".artifacts", "1", "artifact", "artifact.zip")
+        
+        if os.path.exists(artifact_zip_path):
+            logger.info(f"Found artifact.zip at {artifact_zip_path}")
+            
+            # Create a temporary directory to extract the zip contents
+            with tempfile.TemporaryDirectory() as temp_dir:
+                logger.info(f"Extracting artifact.zip to {temp_dir}")
+                
+                try:
+                    # Extract the zip file
+                    with zipfile.ZipFile(artifact_zip_path, 'r') as zip_ref:
+                        zip_ref.extractall(temp_dir)
+                    
+                    # Look for the target APK file in the extracted directory
+                    target_apk = "app-arm64-v8a-release.apk"
+                    found_target = False
+                    
+                    # Walk through the extracted directory to find APK files
+                    for root, dirs, files in os.walk(temp_dir):
+                        for file in files:
+                            # First priority is the specific target APK
+                            if file == target_apk:
+                                source_path = os.path.join(root, file)
+                                dest_path = os.path.join(build_dir, file)
+                                
+                                # Copy the APK to the build directory
+                                shutil.copy2(source_path, dest_path)
+                                logger.info(f"Found target APK! Copied from {source_path} to {dest_path}")
+                                
+                                # Add to artifacts dictionary
+                                artifacts[file] = dest_path
+                                found_target = True
+                                break  # Found our primary target, no need to continue
+                    
+                    # If we didn't find the specific target APK, look for any APK as fallback
+                    if not found_target:
+                        for root, dirs, files in os.walk(temp_dir):
+                            for file in files:
+                                if file.endswith(".apk"):
+                                    source_path = os.path.join(root, file)
+                                    dest_path = os.path.join(build_dir, file)
+                                    
+                                    # Copy the APK to the build directory
+                                    shutil.copy2(source_path, dest_path)
+                                    logger.info(f"Found APK file: {file}. Copied to {dest_path}")
+                                    
+                                    # Add to artifacts dictionary
+                                    artifacts[file] = dest_path
+                except Exception as e:
+                    logger.error(f"Error extracting or processing artifact.zip: {str(e)}")
+        
+        # Fallback: If no artifacts were found in the zip, check the build/apk dir
+        if not artifacts:
+            logger.info("No artifacts found in artifact.zip, checking build/apk directory")
+            apk_dir = os.path.join(self.project_dir, "build", "apk")
+            if os.path.exists(apk_dir):
+                for file in os.listdir(apk_dir):
+                    if file.endswith(".apk"):
+                        source_path = os.path.join(apk_dir, file)
+                        dest_path = os.path.join(build_dir, file)
+                        
+                        # Copy to build directory
+                        shutil.copy2(source_path, dest_path)
+                        logger.info(f"Found APK in build/apk. Copied from {source_path} to {dest_path}")
+                        
+                        # Add to artifacts dictionary with the new path
+                        artifacts[file] = dest_path
+        
+        if artifacts:
+            logger.info(f"Found {len(artifacts)} APK artifact(s): {list(artifacts.keys())}")
+        else:
+            logger.warning("No APK artifacts found")
         
         return artifacts
 

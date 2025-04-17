@@ -59,8 +59,3 @@ jobs:
       - name: 10. 构建 App
         run: |
           flet build apk --split-per-abi
-      
-      - name: 11. 上传至 Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          path: build/apk
