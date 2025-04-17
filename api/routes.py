@@ -483,16 +483,43 @@ async def build_apk(
         if not project_dir:
             raise ResourceNotFoundError(f"Project not found: {request.project_name}")
         
-        # Update task status if task_id is provided
+        # Find task to update - first try by task_id if provided
         task = None
         if request.task_id:
             task = db.query(Task).filter(Task.id == request.task_id).first()
             if task:
-                task.apk_build_status = "BUILDING"
-                db.commit()
-                logger.info(f"Updated task {request.task_id} APK build status to BUILDING")
+                logger.info(f"Found task {request.task_id} to update APK build status")
             else:
-                logger.warning(f"Task {request.task_id} not found")
+                logger.warning(f"Task {request.task_id} not found, will try to find by project details")
+                
+        # If no task found by ID or no ID provided, try to find by project details
+        if not task:
+            project_path_pattern = f"%{request.project_name}%"
+            query = db.query(Task).filter(Task.result_path.like(project_path_pattern))
+            
+            # Add organization filter if provided
+            if request.organization:
+                org_pattern = f"%{request.organization}%"
+                query = query.filter(Task.result_path.like(org_pattern))
+                
+            # Add timestamp filter if provided
+            if request.timestamp:
+                timestamp_pattern = f"%{request.timestamp}%"
+                query = query.filter(Task.result_path.like(timestamp_pattern))
+            
+            # Get most recent matching task
+            task = query.order_by(Task.created_at.desc()).first()
+            
+            if task:
+                logger.info(f"Found matching task {task.id} by project details")
+            else:
+                logger.warning(f"No matching task found for project {request.project_name}")
+        
+        # Update task status to BUILDING if we found a task
+        if task:
+            task.apk_build_status = "BUILDING"
+            db.commit()
+            logger.info(f"Updated task {task.id} APK build status to BUILDING")
         
         # Build the APK using GitHub Actions
         result = await build_apk_for_project(
@@ -507,21 +534,19 @@ async def build_apk(
             apk_path = list(result["artifacts"].values())[0] if result["artifacts"] else None
             logger.info(f"APK built successfully at: {apk_path}")
             
-            # Update task if task_id is provided
+            # Update task if we found one
             if task:
                 task.apk_build_status = "BUILDED"
                 task.apk_path = apk_path
                 db.commit()
-                logger.info(f"Updated task {request.task_id} APK build status to BUILDED")
-        else:
+                logger.info(f"Updated task {task.id} APK build status to BUILDED")
+        elif task:
+            # Update task with failure status if we found a task
             logger.warning(f"APK build failed or no artifacts produced: {result.get('message')}")
-            
-            # Update task if task_id is provided
-            if task:
-                task.apk_build_status = "BUILDFAILED"
-                task.error_message = result.get('message', 'APK build failed')
-                db.commit()
-                logger.info(f"Updated task {request.task_id} APK build status to BUILDFAILED")
+            task.apk_build_status = "BUILDFAILED"
+            task.error_message = result.get('message', 'APK build failed')
+            db.commit()
+            logger.info(f"Updated task {task.id} APK build status to BUILDFAILED")
         
         # Return build results
         return BuildApkResponse(
